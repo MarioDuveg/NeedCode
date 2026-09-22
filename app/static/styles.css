@@ -36,7 +36,6 @@ h2 { margin-top: 28px; font-size: 16px; }
 .signature { color: #93c5fd; }
 .examples { display: grid; gap: 10px; }
 .example { color: #d4d4d8; font-size: 13px; line-height: 1.6; }
-.grading-note { margin-top: 24px; padding: 14px; border-radius: 8px; border: 1px solid #3b3425; background: #211d16; color: #e7d9bb; font-size: 13px; line-height: 1.5; }
 .score-card { flex: 0 0 auto; background: var(--panel-2); border: 1px solid var(--line); padding: 10px 12px; border-radius: 8px; }
 .score-card span { color: var(--muted); display: block; font-size: 11px; }
 .score-card strong { display: block; margin-top: 3px; }
