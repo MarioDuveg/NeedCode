@@ -111,3 +111,7 @@ algograder/
 ├── requirements-dev.txt
 └── README.md
 ```
+
+## Editor
+
+El editor incluye resaltado de sintaxis de Python para palabras clave, built-ins, strings, comentarios, números y operadores. El resaltado es local y no habilita pegado de código.

@@ -38,3 +38,13 @@ def test_correct_small_suffix_solution_gets_partial_credit_or_better():
     data = response.json()
     assert data["score"] >= 4
     assert data["total"] == 10
+
+def test_editor_includes_python_syntax_highlighting():
+    index = client.get("/")
+    script = client.get("/static/app.js")
+    styles = client.get("/static/styles.css")
+    assert index.status_code == 200
+    assert 'id="highlight-code"' in index.text
+    assert "highlightPython" in script.text
+    assert ".tok-keyword" in styles.text
+

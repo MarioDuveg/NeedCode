@@ -10,6 +10,110 @@ const editor = $("editor");
 const submitBtn = $("submit");
 const pasteWarning = $("paste-warning");
 
+const PYTHON_KEYWORDS = new Set([
+  "False", "None", "True", "and", "as", "assert", "async", "await", "break", "class", "continue",
+  "def", "del", "elif", "else", "except", "finally", "for", "from", "global", "if", "import", "in",
+  "is", "lambda", "nonlocal", "not", "or", "pass", "raise", "return", "try", "while", "with", "yield",
+  "match", "case"
+]);
+const PYTHON_BUILTINS = new Set([
+  "abs", "all", "any", "bool", "dict", "enumerate", "filter", "float", "int", "len", "list", "map",
+  "max", "min", "next", "object", "print", "range", "reversed", "set", "sorted", "str", "sum", "tuple",
+  "type", "zip"
+]);
+
+function escapeCode(value) {
+  return String(value).replace(/[&<>]/g, (ch) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;" }[ch]));
+}
+
+function span(cls, value) {
+  return `<span class="tok-${cls}">${escapeCode(value)}</span>`;
+}
+
+function highlightPython(source) {
+  let out = "";
+  let i = 0;
+  const n = source.length;
+
+  while (i < n) {
+    const ch = source[i];
+
+    if (ch === "#") {
+      let j = source.indexOf("\n", i);
+      if (j === -1) j = n;
+      out += span("comment", source.slice(i, j));
+      i = j;
+      continue;
+    }
+
+    const prefixMatch = source.slice(i).match(/^(?:r|u|b|br|rb|f|fr|rf)?(?=[\"'])/i);
+    const prefix = prefixMatch ? prefixMatch[0] : "";
+    const quoteIndex = i + prefix.length;
+    if (quoteIndex < n && (source[quoteIndex] === "\"" || source[quoteIndex] === "'")) {
+      const quote = source[quoteIndex];
+      const triple = source.slice(quoteIndex, quoteIndex + 3) === quote.repeat(3);
+      const openerLength = triple ? 3 : 1;
+      let j = quoteIndex + openerLength;
+      while (j < n) {
+        if (source[j] === "\\") {
+          j += 2;
+          continue;
+        }
+        if (triple ? source.slice(j, j + 3) === quote.repeat(3) : source[j] === quote) {
+          j += openerLength;
+          break;
+        }
+        if (!triple && source[j] === "\n") break;
+        j += 1;
+      }
+      out += span("string", source.slice(i, j));
+      i = j;
+      continue;
+    }
+
+    if (/[A-Za-z_]/.test(ch)) {
+      let j = i + 1;
+      while (j < n && /[A-Za-z0-9_]/.test(source[j])) j += 1;
+      const word = source.slice(i, j);
+      if (PYTHON_KEYWORDS.has(word)) out += span("keyword", word);
+      else if (PYTHON_BUILTINS.has(word)) out += span("builtin", word);
+      else out += escapeCode(word);
+      i = j;
+      continue;
+    }
+
+    if (/\d/.test(ch) || (ch === "." && /\d/.test(source[i + 1] || ""))) {
+      const numberMatch = source.slice(i).match(/^(?:0[xX][0-9a-fA-F_]+|0[bB][01_]+|0[oO][0-7_]+|(?:\d[\d_]*\.?[\d_]*|\.\d[\d_]*)(?:[eE][+-]?\d[\d_]*)?j?)/);
+      if (numberMatch) {
+        out += span("number", numberMatch[0]);
+        i += numberMatch[0].length;
+        continue;
+      }
+    }
+
+    if ("+-*/%=<>!&|^~:@".includes(ch)) {
+      let j = i + 1;
+      while (j < n && "+-*/%=<>!&|^~:@".includes(source[j]) && j - i < 3) j += 1;
+      out += span("operator", source.slice(i, j));
+      i = j;
+      continue;
+    }
+
+    out += escapeCode(ch);
+    i += 1;
+  }
+
+  // A trailing newline needs a visible final character so the overlay keeps the same height as the textarea.
+  return out + (source.endsWith("\n") ? " " : "");
+}
+
+function updateHighlight() {
+  $("highlight-code").innerHTML = highlightPython(editor.value);
+  $("highlight").scrollTop = editor.scrollTop;
+  $("highlight").scrollLeft = editor.scrollLeft;
+}
+
+
 function saveScores() {
   sessionStorage.setItem("algograder-scores", JSON.stringify(state.scores));
   const totalPassed = Object.values(state.scores).reduce((a, b) => a + Number(b || 0), 0);
@@ -21,6 +125,7 @@ function updateLineNumbers() {
   const count = Math.max(1, editor.value.split("\n").length);
   $("line-numbers").textContent = Array.from({ length: count }, (_, i) => i + 1).join("\n");
   $("line-numbers").scrollTop = editor.scrollTop;
+  updateHighlight();
 }
 
 function flashPasteWarning() {
@@ -60,6 +165,8 @@ editor.addEventListener("input", () => {
 });
 editor.addEventListener("scroll", () => {
   $("line-numbers").scrollTop = editor.scrollTop;
+  $("highlight").scrollTop = editor.scrollTop;
+  $("highlight").scrollLeft = editor.scrollLeft;
 });
 
 function renderList() {
